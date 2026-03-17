@@ -1,172 +1,232 @@
-import streamlit as sl
-import pandas as pd
-import plotly.express as px
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-#from wordcloud import WordCloud
+import pandas as pd
 from PIL import Image
+import plotly.express as px
+import streamlit as st
 
-@sl.cache_data
+ROOT = Path(__file__).parent.parent
+DATA = ROOT / "data"
+ASSETS = ROOT / "assets"
+
+
+@st.cache_data
 def load_df():
-	df1 = pd.read_pickle('df_clean1.pickle')
-	df2 = pd.read_pickle('df_clean2.pickle')
-	df3 = pd.read_pickle('df_clean3.pickle')
-	df4 = pd.read_pickle('df_clean4.pickle')
-	df = pd.concat([df1, df2, df3, df4])
-	return df
+    df1 = pd.read_pickle(DATA / "df_clean1.pickle")
+    df2 = pd.read_pickle(DATA / "df_clean2.pickle")
+    df3 = pd.read_pickle(DATA / "df_clean3.pickle")
+    df4 = pd.read_pickle(DATA / "df_clean4.pickle")
+    df = pd.concat([df1, df2, df3, df4])
+    return df
 
-df = load_df()
 
 def tab_analyse():
-	sl.title('Analyse')
+    df = load_df()
 
-	tab1, tab2, tab3, tab4 = sl.tabs(['Analyse exploratoire', 'Descriptions', 'Comparateur de prix', 'Conseil'])
+    st.title("Analyse")
 
-	with tab1:
-		sl.write('**Note moyenne par pays**')
-		df_country = df.groupby(by = ['country', 'code'], as_index = False)['points'].mean()
-		fig = px.choropleth(df_country, 
-			locations = 'code', 
-			color = 'points', 
-			hover_name = 'country', 
-			color_continuous_scale = [[0, 'rgb(255,255,255)'], [1, 'rgb(166,24,46)']])
-		#projection='natural earth'
-		sl.plotly_chart(fig)
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["Analyse exploratoire", "Descriptions", "Comparateur de prix", "Conseil"]
+    )
 
-		col1, col2 = sl.columns([1,1])
+    with tab1:
+        st.subheader("Note moyenne par pays")
+        df_country = df.groupby(by=["country", "code"], as_index=False)["points"].mean()
+        fig = px.choropleth(
+            df_country,
+            locations="code",
+            color="points",
+            color_continuous_scale=[[0, "rgb(255,255,255)"], [1, "rgb(166,24,46)"]],
+            hover_name="country",
+            height=450
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-		with col1:
-			sl.write('**Top 10 - Répartition des vins par pays**')
-			labels = df.country.value_counts().nlargest(10).index
-			sizes = df.country.value_counts().nlargest(10)
-			fig, ax = plt.subplots()
-			ax.pie(sizes, labels = labels, autopct = '%1.1f%%')
-			sl.pyplot(fig)
+        col1, col2 = st.columns(2)
 
-		with col2:
-			sl.write('**Top 10 - Les pays les mieux notés**')
-			y = df.groupby(by = 'country')['points'].mean().nlargest(10).index
-			width = df.groupby(by = 'country')['points'].mean().nlargest(10)
-			fig, ax = plt.subplots()
-			ax.barh(y = y, width = width, color = '#A6182E')
-			ax.invert_yaxis()
-			ax.yaxis.set_label_position('right')
-			ax.yaxis.tick_right()
-			ax.set_xlabel('Note moyenne')
-			sl.pyplot(fig)
+        with col1:
+            st.subheader("Top 10 - Les pays les mieux notés")
+            top_countries = df.groupby("country")["points"].mean().nlargest(10)
+            fig, ax = plt.subplots(figsize=(4,5))
+            ax.barh(y=top_countries.index, width=top_countries.values, color="#A6182E")
+            ax.invert_yaxis()
+            ax.set_xlabel("Note moyenne")
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
 
-		sl.divider()
+        with col2:
+            st.subheader("Top 10 - Répartition des vins par pays")
+            top_counts = df.country.value_counts().nlargest(10)
+            fig, ax = plt.subplots()
+            ax.pie(top_counts.values, labels=top_counts.index, autopct="%1.1f%%")
+            st.pyplot(fig, use_container_width=True)
+            plt.close(fig)
 
-		sl.write('**Note moyenne des vins au cours des années**')
+        st.divider()
 
-		col3, col4, col5 = sl.columns([1,1,1])
+        st.subheader("Note moyenne des vins au cours des années")
 
-		with col3:
-			df2 = load_df()
-			
-			country_options2 = df['country'].drop_duplicates().sort_values().to_list()
-			country_options2.insert(0, '-')
-			user_country2 = sl.selectbox('Pays', country_options2, key = 'df2country')
+        df_filtered = df.copy()
 
-		with col4:
-			province_options2 = df2.loc[df2['country'] == user_country2]['province'].drop_duplicates().sort_values().to_list()
-			user_province2 = sl.selectbox('Région', province_options2, key = 'df2province')
-		
-		with col5:
-			variety_options2 = df2.loc[df2['province'] == user_province2]['variety'].drop_duplicates().sort_values().to_list()
-			user_variety2 = sl.selectbox('Cépage', variety_options2, key = 'df2variety')
+        col3, col4, col5 = st.columns(3)
 
-		if user_country2 != '-':
-			df2 = df2.loc[df2['country'] == user_country2]
-		if user_province2:
-			df2 = df2.loc[df2['province'] == user_province2]
-		if user_variety2:
-			df2 = df2.loc[df2['variety'] == user_variety2]
+        with col3:
+            country_options = df["country"].drop_duplicates().sort_values().to_list()
+            country_options.insert(0, "-")
+            user_country = st.selectbox("Pays", country_options, key="tab1_country")
 
-		x = df2.groupby(by = 'year')['points'].mean().index
-		y = df2.groupby(by = 'year')['points'].mean()
-		fig, ax = plt.subplots()
-		ax.plot(x, y, marker = ".", color = '#A6182E', label = 'Note moyenne')
-		#plt.legend()
-		ax.set_ylabel('Note moyenne')
-		sl.pyplot(fig)
+        with col4:
+            province_options = (
+                df.loc[df["country"] == user_country]["province"]
+                .drop_duplicates()
+                .sort_values()
+                .to_list()
+            )
+            user_province = st.selectbox(
+                "Région", province_options, key="tab1_province"
+            )
 
-	with tab2:
-		
-		col1, col2 = sl.columns([1,1])
+        with col5:
+            variety_options = (
+                df.loc[df["province"] == user_province]["variety"]
+                .drop_duplicates()
+                .sort_values()
+                .to_list()
+            )
+            user_variety = st.selectbox("Cépage", variety_options, key="tab1_variety")
 
-		with col1:
-			img = Image.open('wc_global.png')
-			sl.image(img)
+        if user_country != "-":
+            df_filtered = df_filtered.loc[df_filtered["country"] == user_country]
+        if user_province:
+            df_filtered = df_filtered.loc[df_filtered["province"] == user_province]
+        if user_variety:
+            df_filtered = df_filtered.loc[df_filtered["variety"] == user_variety]
 
-		with col2:
-			sl.write("WordCloud du dataset intégral")
+        year_points = df_filtered.groupby("year")["points"].mean()
+        fig, ax = plt.subplots(figsize=(10,5))
+        ax.plot(
+            year_points.index,
+            year_points.values,
+            marker=".",
+            color="#A6182E",
+            label="Note moyenne",
+        )
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
 
-		col3, col4 = sl.columns([1,1])
+    with tab2:
+        st.image(Image.open(ASSETS / "wc_global.png"), width=450)
+        st.write("**WordCloud du dataset intégral**")
 
-		with col3:
-			img = Image.open('wc_fr_pn.png')
-			sl.image(img)
+        st.image(Image.open(ASSETS / "wc_fr_pn.png"), width=450)
+        st.write("**WordCloud du dataset filtré (Pinot Noir de Bourgogne)**")
 
-		with col4:
-			sl.write("WordCloud du dataset filtré (Pinot Noir de Bourgogne)")
+        st.image(Image.open(ASSETS / "wc_client.png"), width=450)
+        st.write("**WordCloud du descriptif sur le Corton Grèves 2016**")
 
-		col5, col6 = sl.columns([1,1])
+    with tab3:
+        df_filtered_price = df.copy()
 
-		with col5:
-			img = Image.open('wc_client.png')
-			sl.image(img)
+        col1, col2, col3, col4 = st.columns(4)
 
-		with col6:
-			sl.write("WordCloud du descriptif sur le Corton Grèves 2016")
+        with col1:
+            country_options_price = (
+                df["country"].drop_duplicates().sort_values().to_list()
+            )
+            country_options_price.insert(0, "-")
+            user_country_price = st.selectbox(
+                "Pays", country_options_price, key="tab3_country"
+            )
 
-	with tab3:
+        with col2:
+            province_options_price = (
+                df.loc[df["country"] == user_country_price]["province"]
+                .drop_duplicates()
+                .sort_values()
+                .to_list()
+            )
+            user_province_price = st.selectbox(
+                "Région", province_options_price, key="tab3_province"
+            )
 
-		col1, col2, col3, col4 = sl.columns([1,1,1,1])
-		
-		with col1:
-			df3 = load_df()
+        with col3:
+            variety_options_price = (
+                df.loc[df["province"] == user_province_price]["variety"]
+                .drop_duplicates()
+                .sort_values()
+                .to_list()
+            )
+            user_variety_price = st.selectbox(
+                "Cépage", variety_options_price, key="tab3_variety"
+            )
 
-			country_options3 = df['country'].drop_duplicates().sort_values().to_list()
-			country_options3.insert(0, '-')
-			user_country3 = sl.selectbox('Pays', country_options3, key = 'df3country')
+        with col4:
+            year_options_price = (
+                df.loc[
+                    (df["province"] == user_province_price)
+                    & (df["variety"] == user_variety_price)
+                ]["year"]
+                .drop_duplicates()
+                .sort_values()
+                .to_list()
+            )
+            user_year_price = st.selectbox(
+                "Millésime", year_options_price, key="tab3_years"
+            )
 
-		with col2:
-			province_options3 = df3.loc[df3['country'] == user_country3]['province'].drop_duplicates().sort_values().to_list()
-			user_province3 = sl.selectbox('Région', province_options3, key = 'df3province')
-		
-		with col3:
-			variety_options3 = df3.loc[df3['province'] == user_province3]['variety'].drop_duplicates().sort_values().to_list()
-			user_variety3 = sl.selectbox('Cépage', variety_options3, key = 'df3variety')
+        if user_country_price != "-":
+            df_filtered_price = df_filtered_price.loc[
+                df_filtered_price["country"] == user_country_price
+            ]
+        if user_province_price:
+            df_filtered_price = df_filtered_price.loc[
+                df_filtered_price["province"] == user_province_price
+            ]
+        if user_variety_price:
+            df_filtered_price = df_filtered_price.loc[
+                df_filtered_price["variety"] == user_variety_price
+            ]
+        if user_year_price:
+            df_filtered_price = df_filtered_price.loc[
+                df_filtered_price["year"] == user_year_price
+            ]
 
-		with col4:
-			year_options3 = df3.loc[(df3['province'] == user_province3) & (df3['variety'] == user_variety3)]['year'].drop_duplicates().sort_values().to_list()
-			user_year3 = sl.selectbox('Millésime', year_options3, key = 'df3years')
+        describe_table = (
+            df_filtered_price.describe().loc["min":"max"].transpose().iloc[2:3]
+        )
+        st.dataframe(describe_table)
+        st.caption("Prix en dollars")
 
-		if user_country3 != '-':
-			df3 = df3.loc[df3['country'] == user_country3]
-		if user_province3:
-			df3 = df3.loc[df3['province'] == user_province3]
-		if user_variety3:
-			df3 = df3.loc[df3['variety'] == user_variety3]
-		if user_year3:
-			df3 = df3.loc[df3['year'] == user_year3]
+        st.divider()
 
-		describe_table = df3.describe().loc['min':'max'].transpose().iloc[2:3]
-		sl.dataframe(describe_table)
-		sl.caption("Prix en dollars")
+        st.subheader(
+            "Prix moyen en dollars du Pinot Noir de Bourgogne au cours des années"
+        )
+        df_fr_bg_pn = df.loc[
+            (df["country"] == "France")
+            & (df["province"] == "Burgundy")
+            & (df["variety"] == "Pinot Noir")
+        ]
+        pivot_table = df_fr_bg_pn.pivot_table(
+            columns="year", index="variety", values="price", aggfunc="mean"
+        ).round(2)
+        pivot_table.columns = pivot_table.columns.astype("Int64")
+        st.dataframe(pivot_table)
 
-		sl.divider()
+    with tab4:
+        st.subheader("Recommandation tarifaire")
 
-		sl.write('**Prix moyen en dollars du Pinot Noir de Bourgogne au cours des années**')
-		df_fr_pn = df.loc[(df['country'] == 'France') & (df['province'] == 'Burgundy') & (df['variety'] == 'Pinot Noir')]
-		pivot_table = df_fr_pn.pivot_table(columns = 'year',
-               index = 'variety',
-               values = 'price',
-               aggfunc = 'mean')
+        col1, col2 = st.columns(2)
 
-		sl.dataframe(pivot_table)
+        with col1:
+            st.metric(label="Prix maximum (Pinot Noir Bourgogne 2016)", value="1 590 $")
 
-	with tab4:
-		sl.write("Selon l'analyse du jeu de données, le prix d'un Pinot Noir de Bourgogne 2016 peut atteindre 1600 dollars sur le marché américain. Or, le prix moyen se situe autour de 74 dollars pour ce millésime.")
+        with col2:
+            st.metric(label="Prix moyen (Pinot Noir Bourgogne 2016)", value="74 $")
 
-		sl.write("Le prix des 25 pourcents les plus chers des vins similaires commence à 68,50 dollars. Afin de se positionner sur le haut de gamme, il est ainsi recommandé de s'aligner sur la moyenne.")
+        st.success(
+            "💡 Recommandation : Afin de se positionner sur le haut de gamme du marché américain, "
+            "il est conseillé de fixer un prix autour de 74 dollars, soit dans la moyenne des "
+            "Pinot Noir de Bourgogne 2016. Le prix du premier quartile supérieur commence à 68,50 dollars."
+        )

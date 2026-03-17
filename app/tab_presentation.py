@@ -1,74 +1,44 @@
-import streamlit as sl
+from pathlib import Path
+
 from PIL import Image
+import streamlit as st
+
+ROOT = Path(__file__).parent.parent
+ASSETS = ROOT / "assets"
 
 def tab_presentation():
-	sl.title('Présentation')
+	st.title('Présentation')
 
-	tab1, tab2, tab3 = sl.tabs(['Contexte', 'Méthodologie/Outils', 'Code'])
+	tab1, tab2 = st.tabs(['Contexte', 'Méthodologie/Outils'])
 
 	with tab1:
 		
-		col1, col2 = sl.columns([1,1])
+		col1, col2 = st.columns(2)
 
 		with col1:
-			sl.subheader("Contexte de l'analyse")
-			sl.write('- Lancement du produit *Domaine des Croix 2016 Corton Grèves* sur le marché américain')
-			sl.write("- **Objectif :** Comprendre le marché afin d'établir un prix compétitif")
+			st.subheader("Contexte de l'analyse")
+			st.write('- Lancement du produit *Domaine des Croix 2016 Corton Grèves* sur le marché américain')
+			st.write("- **Objectif :** Comprendre le marché afin d'établir un prix compétitif")
 
-			sl.subheader("Base de données")
-			sl.write('- [130.000 références](https://github.com/WildCodeSchool/wilddata/raw/main/wine_df.zip) de bouteilles de vin distribuées aux Etats-Unis')
-			sl.write("- **Informations pertinentes :** cépage, région et année de production, note, descriptif d'expert, prix moyen en dollars")
+			st.subheader("Base de données")
+			st.write('- [130.000 références](https://github.com/WildCodeSchool/wilddata/raw/main/wine_df.zip) de bouteilles de vin distribuées aux Etats-Unis')
+			st.write("- **Informations pertinentes :** cépage, région et année de production, note, descriptif d'expert, prix moyen en dollars")
 
 		with col2:
-			img = Image.open('bouteille.jpeg')
-			sl.image(img)
+
+			st.image(Image.open(ASSETS / "bouteille.jpeg"), width=450)
 
 	with tab2:
-		sl.subheader('Méthodologie et outils')
-		sl.write('**1) Préparation des données**')
-		sl.write('- Suppression des valeurs manquantes dans la base de données avec Python et Pandas')
-		sl.write('- Dimension du dataset final : 120.904 lignes')
+		st.subheader('Méthodologie et outils')
+		st.write('**1) Préparation des données**')
+		st.markdown('- Nettoyage et filtrage des valeurs manquantes -> 120.904 vins retenus sur 130.000')
 
-		sl.write('**2) Exploration des données**')
-		sl.write('- Analyse descriptive du marché du vin avec Matplotlib')
-		sl.write('- Carte chloroplèthe avec Plotly')
-		sl.write('- WordCloud avec NLTK (*Natural Language Toolkit*)')
+		st.write('**2) Exploration des données**')
+		st.markdown(
+      		'- Analyse descriptive du marché (notes, prix, cépages) avec Pandas et Matplotlib\n'
+			'- Visualisation géographique des notes moyenne par pays avec Plotly\n'
+			'- Analyse sémantique des descriptions d\'experts avec NLTK et WordCloud'
+   		)
 
-		sl.write('**3) Synthèse**')
-		sl.write('- Création du tableau de bord via une application Streamlit')
-
-	with tab3:
-		sl.subheader("Code de l'analyse")
-
-		sl.write('**NLP**')
-		body = """
-		import nltk
-		nltk.download('popular')
-		import re
-		from nltk.corpus import stopwords
-		from nltk.stem import SnowballStemmer
-
-		def cleaning(text):
-			text = text.lower()
-			text = re.sub(r'[^\w\s]', '', text)
-			tokens = nltk.word_tokenize(text)
-			stopwords = nltk.corpus.stopwords.words("english")
-			tokens_clean = [token for token in tokens if token not in stopwords]
-			stemmer = SnowballStemmer("english")
-			tokens_stemmed = [stemmer.stem(token) for token in tokens_clean]
-			text_clean = " ".join(tokens_stemmed)
-			return text_clean
-
-		df['description_clean'] = df.description.apply(cleaning)
-
-		from wordcloud import WordCloud
-		import matplotlib.pyplot as plt
-
-		wordcloud = WordCloud(width = 480, height = 480, max_font_size = 200, min_font_size = 10)
-		wordcloud.generate_from_text(' '.join(df['description_clean']))
-		plt.figure()
-		plt.imshow(wordcloud, interpolation = 'bilinear')
-		plt.axis('off')
-		plt.show()
-		"""
-		sl.code(body, language = 'python', line_numbers = True)
+		st.write('**3) Synthèse**')
+		st.markdown('- Mise en forme des résultats dans un tableau de bord interactif Streamlit')

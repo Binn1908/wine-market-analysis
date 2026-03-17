@@ -1,22 +1,28 @@
-import streamlit as sl
+from pathlib import Path
+
 from PIL import Image
-from tab_home import tab_home
-from tab_presentation import tab_presentation
-from tab_analyse import tab_analyse
+import streamlit as st
 
-with sl.sidebar:
-	img = Image.open('logo.png')
-	sl.sidebar.image(img)
+from app.tab_analyse import tab_analyse
+from app.tab_home import tab_home
+from app.tab_presentation import tab_presentation
 
-	tabs = {'Home': tab_home,
-		'Présentation': tab_presentation,
-		'Analyse': tab_analyse
-		}
+ROOT = Path(__file__).parent
+ASSETS = ROOT / "assets"
 
-	tab_selection = sl.radio('Menu', list(tabs.keys()))
+st.set_page_config(layout="wide")
+
+tabs = {"Home": tab_home, "Présentation": tab_presentation, "Analyse": tab_analyse}
+
+with st.sidebar:
+    st.image(Image.open(ASSETS / "logo.png"), width=250)
+    tab_selection = st.radio("Menu", list(tabs.keys()))
 
 tabs[tab_selection]()
 
-sl.divider()
+st.divider()
 
-sl.caption('**Le Domaine des Croix - Etude de marché** - by [Chinnawat Wisetwongsa](https://linkedin.com/in/wisetwongsa/)')
+st.markdown(
+    "**Le Domaine des Croix — Etude de marché** · "
+    "Réalisé par [Chinnawat Wisetwongsa](https://linkedin.com/in/wisetwongsa/)"
+)

@@ -1,10 +1,13 @@
-import streamlit as sl
-from PIL import Image
+from pathlib import Path
 
-sl.set_page_config(layout = 'wide')
+from PIL import Image
+import streamlit as st
+
+ROOT = Path(__file__).parent.parent
+ASSETS = ROOT / "assets"
+
 
 def tab_home():
-	sl.title('Bienvenue')
+    st.title("Bienvenue")
 
-	img = Image.open('vigne.png')
-	sl.image(img)
+    st.image(Image.open(ASSETS / "vigne.png"))
