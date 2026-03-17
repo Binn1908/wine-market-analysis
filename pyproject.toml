@@ -1,0 +1,22 @@
+[project]
+name = "wine-market-analysis"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Chinnawat"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "matplotlib (==3.10.1)",
+    "pandas (==2.2.3)",
+    "pillow (==11.1.0)",
+    "plotly (==6.0.1)",
+    "streamlit (==1.55.0)",
+    "wordcloud (==1.9.4)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
